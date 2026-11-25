@@ -1,0 +1,9 @@
+node_modules
+dist
+test
+tools/*
+!tools/build-web.mjs
+public/verifier.js*
+public/compat.js*
+.git
+config/verifier.yaml

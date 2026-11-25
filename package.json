@@ -1,0 +1,38 @@
+{
+  "name": "discount-eligibility-verifier",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lightweight SD-JWT VC verifier with OpenID Federation trust checks",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "redeem-offer": "tsx tools/wallet/redeem-offer.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify-live": "tsx tools/verify-live.ts",
+    "build": "npm run build:server && npm run build:web",
+    "start": "node dist/server/main.js",
+    "dev": "tsx watch src/server/main.ts",
+    "wallet": "tsx tools/wallet/present-to.ts",
+    "keygen": "tsx tools/keygen.ts",
+    "build:web": "node tools/build-web.mjs --minify",
+    "build:server": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.11",
+    "hono": "^4.13.22",
+    "jose": "^6.2.18",
+    "qrcode-generator": "^2.0.4",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.10",
+    "esbuild": "^0.28.2",
+    "happy-dom": "^21.0.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
+}

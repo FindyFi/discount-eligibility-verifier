@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alennusoikeuden tarkistus</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      background: #f4f6f8;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    header {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
+      padding: 10px 16px; background: #fff; border-bottom: 1px solid #dde2e7;
+    }
+    h1 { font-size: clamp(1rem, 3.5vw, 1.25rem); margin: 0; min-width: 0; overflow-wrap: anywhere; }
+    nav { display: flex; gap: 4px; }
+    nav button {
+      font: inherit; font-weight: 600; min-width: 48px; min-height: 40px;
+      border: 1px solid #c5ccd3; background: #fff; border-radius: 8px; cursor: pointer;
+    }
+    nav button[aria-pressed="true"] { background: #003680; border-color: #003680; color: #fff; }
+    credential-verifier { min-height: 0; }
+  </style>
+  <script type="module" src="verifier.js"></script>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="title">Alennusoikeuden tarkistus</h1>
+    <nav aria-label="Kieli / Språk / Language">
+      <button type="button" data-lang="fi" aria-pressed="true">FI</button>
+      <button type="button" data-lang="sv" aria-pressed="false">SV</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </nav>
+  </header>
+  <credential-verifier mode="kiosk"></credential-verifier>
+  <script>
+    // Language from ?lang=fi|sv|en, switchable from the header.
+    const titles = { fi: 'Alennusoikeuden tarkistus', sv: 'Kontroll av rabattberättigande', en: 'Discount eligibility check' };
+    const el = document.querySelector('credential-verifier');
+    function setLang(lang) {
+      if (!titles[lang]) return;
+      document.documentElement.lang = lang;
+      document.title = titles[lang];
+      document.querySelector('[data-i18n="title"]').textContent = titles[lang];
+      el.setAttribute('lang', lang);
+      for (const b of document.querySelectorAll('nav button')) b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+    }
+    const params = new URLSearchParams(location.search);
+    // ?sound=off for quiet locations (skips the "tap to start" step that unlocks audio)
+    if (params.get('sound') === 'off') el.setAttribute('sound', 'off');
+    setLang(params.get('lang') || 'fi');
+    document.querySelector('nav').addEventListener('click', (e) => setLang(e.target.closest('button')?.dataset.lang));
+  </script>
+</body>
+</html>

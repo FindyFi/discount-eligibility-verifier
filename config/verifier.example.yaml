@@ -1,0 +1,78 @@
+# Discount eligibility verifier configuration.
+# Values like ${NAME} are read from environment variables (${NAME:-default} gives a default).
+# CONFIG_FILE selects this file; PUBLIC_URL and PORT override the values below.
+
+# Public base URL of this service, as wallets and browsers reach it (HTTPS in production).
+publicUrl: ${PUBLIC_URL:-http://localhost:8374}
+port: 8374
+
+# OpenID Federation trust anchors. Issuers must have a valid trust chain to one of these.
+trustAnchors:
+  - entityId: https://findy.trustregistry.eu
+    # Optionally pin the anchor's federation keys instead of trusting its entity configuration on fetch:
+    # jwks: { keys: [ { kty: EC, crv: P-256, x: ..., y: ..., kid: ... } ] }
+
+# Accepted credential types and eligibility rules (inline list or a path to a JSON file).
+credentialTypes: ./credential-types.json
+
+# Time zone for date-only claims such as expiry_date: 2026-12-31 (valid through the end of that day).
+timeZone: Europe/Helsinki
+
+# Accept issuer signing keys from /.well-known/jwt-vc-issuer in addition to federation metadata.
+allowJwtVcIssuerMetadata: true
+
+oid4vp:
+  clientIdPrefix: redirect_uri      # default for new sessions: redirect_uri or openid_federation (needs the federation section)
+  requestMode: value                # value: everything in the QR code; reference: short QR + request_uri
+  walletUrlScheme: openid4vp://
+  sessionTtlSeconds: 300
+  verifierName: Alennusten tarkistus
+
+# The verifier as an OpenID Federation entity, for the openid_federation client_id prefix.
+# Remove or comment out to disable. When present, API clients may choose the prefix per session.
+# federation:
+#   entityId: ${PUBLIC_URL}            # default: publicUrl; must be https
+#   authorityHints: [https://findy.trustregistry.eu]   # default: the trust anchors
+#   federationKey: ${FEDERATION_KEY}   # private JWK; register its public part at the trust anchor
+#   requestSigningKey: ${REQUEST_SIGNING_KEY}   # private JWK; signs request objects, published in metadata
+#   organizationName: Example Oy
+#   homepageUri: https://example.com
+#   logoUri: https://example.com/logo.png
+#   policyUri: https://example.com/privacy
+#   contacts: [support@example.com]
+#   metadataEntityTypes: [openid_credential_verifier, openid_relying_party]
+#   entityConfigurationTtlSeconds: 86400
+#   includeTrustChain: true
+
+# Digital Credentials API (browser-mediated wallet access, origin-bound).
+dcApi:
+  enabled: true
+  allowedOrigins: []                # origins of pages embedding the verifier, besides publicUrl and apiClients[].allowedOrigins
+
+# Standalone kiosk page (no API key needed to start a session).
+kiosk:
+  enabled: true
+  acceptedTypes: [pension, student]
+  resetAfterSeconds: 8
+
+# Service provider backends.
+apiClients:
+  - id: demo-shop
+    apiKey: ${DEMO_SHOP_API_KEY:-change-me-to-a-long-random-secret}
+    # webhookUrl: https://shop.example/hooks/eligibility
+    allowedReturnUrls: [http://localhost:8374/]
+    allowedOrigins: []
+
+# Private JWK for signing results (JSON). Generate one with: npm run keygen
+# Without it, a per-process key is used and result JWTs cannot be verified after a restart.
+resultSigningKey: ${RESULT_SIGNING_KEY:-}
+
+# Wallet compatibility tester at /compat.html (keep disabled in production).
+compat:
+  enabled: false
+  token: ${COMPAT_TOKEN:-}             # at least 16 characters; entered on the page
+  resultsFile: data/compat-results.json
+  # wallets: [Heidi, Hovi Wallet, Paradym, Talao, Toppan Wallet, UniMe]
+
+# Extra origins allowed to call the browser endpoints (CORS).
+corsOrigins: []

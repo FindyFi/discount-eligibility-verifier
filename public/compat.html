@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Wallet compatibility</title>
+  <style>
+    :root { --text: #1b1f24; --muted: #57606a; --line: #d0d7de; --soft: #f6f8fa; --accent: #003680; --ok: #1a7f37; --bad: #c62828; --warn: #9a6700; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    h2 { font-size: 1.15rem; margin: 32px 0 8px; }
+    h3 { margin: 0 0 12px; font-size: 1.05rem; }
+    .muted { color: var(--muted); }
+    .small { font-size: .85rem; }
+    label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: .9rem; }
+    input, select, textarea { font: inherit; font-weight: 400; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; min-height: 40px; }
+    button { font: inherit; font-weight: 600; padding: 8px 14px; min-height: 40px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.link { border: 0; padding: 0; min-height: 0; background: none; color: #0550ae; font-weight: 400; text-decoration: underline; }
+    .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #fff; }
+    .setup { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    #variants { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+    #variants li { display: flex; align-items: center; gap: 12px; }
+    .run-grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 24px; align-items: start; }
+    @media (max-width: 760px) { .run-grid { grid-template-columns: 1fr; } }
+    .qr { display: block; line-height: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .qr svg { width: 100%; height: auto; }
+    .status-line { font-size: 1.1rem; font-weight: 600; }
+    .status-line[data-status="completed"] { color: var(--ok); }
+    .status-line[data-status="failed"], .status-line[data-status="expired"] { color: var(--bad); }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    textarea { width: 100%; resize: vertical; }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+    th, td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
+    thead th { background: var(--soft); }
+    .v-works { color: var(--ok); }
+    .v-failed, .v-wallet_refused { color: var(--bad); }
+    .v-no_response, .v-other { color: var(--warn); }
+    .records td.small div { overflow-wrap: anywhere; }
+    .error { color: var(--bad); }
+  </style>
+  <script type="module" src="compat.js"></script>
+</head>
+<body>
+<main>
+  <h1>Wallet compatibility</h1>
+  <p class="muted">Run each request variant with each wallet. The server records whether the wallet completed the protocol, separately from whether the credential itself was accepted.</p>
+
+  <section id="signin" class="card">
+    <form id="signin-form">
+      <label>Tester token <input id="token" type="password" autocomplete="current-password" required></label>
+      <p><button class="primary" type="submit">Open</button> <span id="signin-error" class="error"></span></p>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+    <section class="card">
+      <div class="setup">
+        <label>Wallet
+          <select id="wallet"></select>
+          <input id="wallet-other" placeholder="Wallet name" hidden>
+        </label>
+        <label>Wallet version <input id="wallet-version" placeholder="e.g. 2.4.1"></label>
+        <label>Platform
+          <select id="platform"><option value="">–</option><option>iOS</option><option>Android</option></select>
+        </label>
+        <label>Credential in the wallet <select id="credential"></select></label>
+      </div>
+      <ul id="variants"></ul>
+    </section>
+
+    <section id="run" class="card" hidden style="margin-top: 16px"></section>
+
+    <h2>Matrix</h2>
+    <p class="muted small">Latest result per wallet, variant and credential. ✅ works · ❌ failed · ⛔ wallet refused · ⌛ no response</p>
+    <div class="table-wrap" id="matrix"></div>
+    <p class="buttons">
+      <button type="button" id="export-md">Export Markdown</button>
+      <button type="button" id="export-json">Export JSON</button>
+      <button type="button" id="refresh">Refresh</button>
+    </p>
+
+    <h2>All results</h2>
+    <div class="table-wrap" id="records"></div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+# Test wallet private key and raw credentials from live issuers stay local
+test/fixtures/live/
+config/verifier.yaml
+public/verifier.js
+public/verifier.js.map
+public/compat.js
+public/compat.js.map
+data/
