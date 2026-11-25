@@ -40,6 +40,8 @@ interface Run {
   outcome?: string;
   reason?: string;
   abort: AbortController;
+  /** Kept outside the DOM so re-rendering never loses what the tester typed. */
+  notes: string;
 }
 
 const TOKEN_KEY = 'compat-token';
@@ -109,7 +111,7 @@ async function startRun(variant: Variant) {
     method: 'POST',
     body: JSON.stringify({ variant, credential_type: $<HTMLSelectElement>('#credential').value }),
   });
-  run = { variant, sessionId: s.session_id!, token: s.browser_token!, walletUrl: s.wallet_url!, status: 'pending', abort: new AbortController() };
+  run = { variant, sessionId: s.session_id!, token: s.browser_token!, walletUrl: s.wallet_url!, status: 'pending', abort: new AbortController(), notes: '' };
   renderRun();
   void poll(run);
 }
@@ -119,10 +121,12 @@ async function poll(r: Run) {
     try {
       const res = await fetch(`/public/sessions/${encodeURIComponent(r.sessionId)}?wait=25&since=${r.status}`, { headers: { 'x-session-token': r.token }, signal: r.abort.signal });
       const v = await res.json();
+      // Long-polls also return unchanged after their timeout: re-render only on real changes.
+      const changed = v.status !== r.status || v.outcome !== r.outcome || v.reason !== r.reason;
       r.status = v.status;
       r.outcome = v.outcome;
       r.reason = v.reason;
-      if (run === r) renderRun();
+      if (changed && run === r) renderRun();
     } catch {
       if (r.abort.signal.aborted) return;
       await new Promise((ok) => setTimeout(ok, 2000));
@@ -148,6 +152,9 @@ function renderRun() {
   }
   el.hidden = false;
   const done = TERMINAL.has(r.status);
+  const active = document.activeElement as HTMLTextAreaElement | null;
+  const hadFocus = active?.id === 'notes';
+  const caret = hadFocus ? [active!.selectionStart, active!.selectionEnd] : undefined;
   el.innerHTML = `
     <h3>${esc(variantLabel(r.variant))}</h3>
     <div class="run-grid">
@@ -158,7 +165,7 @@ function renderRun() {
       <div>
         <p class="status-line" data-status="${esc(r.status)}">${esc(STATUS_TEXT[r.status] ?? r.status)}</p>
         ${r.outcome ? `<p>Credential outcome: <strong>${esc(r.outcome)}</strong>${r.reason ? `<br><span class="muted small">${esc(r.reason)}</span>` : ''}</p>` : ''}
-        <label>Notes<textarea id="notes" rows="3" placeholder="What did the wallet show? Did it display the verifier name?"></textarea></label>
+        <label>Notes<textarea id="notes" rows="3" placeholder="What did the wallet show? Did it display the verifier name?">${esc(r.notes)}</textarea></label>
         <div class="buttons">
           ${done ? '<button type="button" class="primary" data-save="">Save result</button>' : ''}
           <button type="button" data-save="wallet_refused">Wallet refused the request</button>
@@ -168,6 +175,14 @@ function renderRun() {
         <p class="muted small">${done ? 'The verdict is derived from the server-side checks; the buttons above override it.' : 'If the wallet gets stuck, record what happened with one of the buttons.'}</p>
       </div>
     </div>`;
+  const notes = el.querySelector<HTMLTextAreaElement>('#notes')!;
+  notes.addEventListener('input', () => {
+    r.notes = notes.value;
+  });
+  if (hadFocus) {
+    notes.focus();
+    notes.setSelectionRange(caret![0] ?? notes.value.length, caret![1] ?? notes.value.length);
+  }
 }
 
 async function saveRun(verdict: string) {
@@ -186,7 +201,7 @@ async function saveRun(verdict: string) {
       wallet,
       wallet_version: $<HTMLInputElement>('#wallet-version').value.trim() || undefined,
       platform: $<HTMLSelectElement>('#platform').value || undefined,
-      notes: (document.getElementById('notes') as HTMLTextAreaElement | null)?.value.trim() || undefined,
+      notes: r.notes.trim() || undefined,
       verdict: verdict || undefined,
     }),
   });
