@@ -22,7 +22,22 @@ docker run -p 8374:8374 \
   discount-eligibility-verifier
 ```
 
+With [pm2](https://pm2.keymetrics.io/):
+
+```sh
+npm ci && npm run build
+cp config/verifier.example.yaml config/verifier.yaml   # then edit
+cp .env.example .env                                   # then fill in the secrets
+pm2 start ecosystem.config.cjs                         # listens on port 8374
+pm2 save && pm2 startup                                # keep it running across reboots
+```
+
+After an update, run `npm ci && npm run build && pm2 reload discount-verifier`.
+[ecosystem.config.cjs](ecosystem.config.cjs) runs exactly one instance, because sessions are kept in memory: don't use cluster mode.
+Secrets belong in `.env`, which is git-ignored, not in the ecosystem file.
+
 Wallets must reach `PUBLIC_URL`, so put the service behind HTTPS in anything but local tests.
+When using a reverse proxy, allow read timeouts of at least 35 seconds for the long-polling endpoints.
 Sessions are kept in memory: run one instance, or use sticky sessions.
 
 ## Configuration
