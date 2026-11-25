@@ -23,7 +23,7 @@ allowJwtVcIssuerMetadata: true
 
 oid4vp:
   clientIdPrefix: redirect_uri      # default for new sessions: redirect_uri or openid_federation (needs the federation section)
-  requestMode: value                # value: everything in the QR code; reference: short QR + request_uri
+  requestMode: reference            # reference (default): short QR + request_uri; value: everything in the QR code
   walletUrlScheme: openid4vp://
   sessionTtlSeconds: 300
   verifierName: Alennusten tarkistus

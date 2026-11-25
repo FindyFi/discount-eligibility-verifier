@@ -169,6 +169,7 @@ describe('integration API', () => {
   });
 
   it('refuses a second response for the same session', async () => {
+    await setup({ oid4vp: { requestMode: 'value' } }); // reads state from the QR link
     const s = await createSession();
     const first = await wallet(s.wallet_url!);
     const again = await wallet(s.wallet_url!, { form: { vp_token: 'x', state: first.params.get('state')! } });
@@ -176,6 +177,7 @@ describe('integration API', () => {
   });
 
   it('records wallet errors', async () => {
+    await setup({ oid4vp: { requestMode: 'value' } }); // reads state from the QR link
     const s = await createSession();
     const state = new URL(s.wallet_url!.replace('openid4vp://', 'https://w/')).searchParams.get('state')!;
     await wallet(s.wallet_url!, { form: { error: 'access_denied', error_description: 'User declined', state } });
@@ -193,7 +195,7 @@ describe('integration API', () => {
   });
 
   it('expires sessions', async () => {
-    await setup({ oid4vp: { sessionTtlSeconds: -1 } });
+    await setup({ oid4vp: { sessionTtlSeconds: -1, requestMode: 'value' } }); // by reference, the expired request cannot even be fetched
     const s = await createSession();
     const status = (await (await api(`/api/sessions/${s.session_id}`)).json()) as Record<string, any>;
     expect(status).toMatchObject({ status: 'expired', outcome: 'expired' });
@@ -307,7 +309,7 @@ describe('configuration', () => {
     await expect(normalizeConfig({ publicUrl: 'nope', trustAnchors: [], credentialTypes: [] })).rejects.toThrow(/publicUrl[\s\S]*credentialTypes[\s\S]*trustAnchors/);
     await expect(normalizeConfig({ publicUrl: PUBLIC_URL, trustAnchors: [{ entityId: TA }], credentialTypes: policies, apiClients: [{ id: 'x', apiKey: 'short' }] })).rejects.toThrow(/apiKey/);
     const c = await normalizeConfig({ publicUrl: PUBLIC_URL + '/', trustAnchors: [{ entityId: TA }], credentialTypes: policies });
-    expect(c).toMatchObject({ publicUrl: PUBLIC_URL, oid4vp: { clientIdPrefix: 'redirect_uri', requestMode: 'value' }, kiosk: { enabled: false } });
+    expect(c).toMatchObject({ publicUrl: PUBLIC_URL, oid4vp: { clientIdPrefix: 'redirect_uri', requestMode: 'reference' }, kiosk: { enabled: false } });
   });
 });
 

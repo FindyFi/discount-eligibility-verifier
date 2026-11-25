@@ -170,7 +170,8 @@ export async function normalizeConfig(raw: Record<string, any>, baseDir = proces
     allowJwtVcIssuerMetadata: raw.allowJwtVcIssuerMetadata ?? true,
     oid4vp: {
       clientIdPrefix: prefix,
-      requestMode: raw.oid4vp?.requestMode === 'reference' ? 'reference' : 'value',
+      // By reference by default: short QR codes, and Heidi rejects requests passed in the QR code.
+      requestMode: raw.oid4vp?.requestMode === 'value' ? 'value' : 'reference',
       walletUrlScheme: raw.oid4vp?.walletUrlScheme ?? 'openid4vp://',
       sessionTtlSeconds: Number(raw.oid4vp?.sessionTtlSeconds ?? 300),
       verifierName: raw.oid4vp?.verifierName,
