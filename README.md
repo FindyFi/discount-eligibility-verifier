@@ -197,3 +197,7 @@ npm run wallet -- '<openid4vp://…>' <name>                        # answer a r
 ```
 
 Live credentials and the test wallet's key are stored in `test/fixtures/live/`, which is git-ignored.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
