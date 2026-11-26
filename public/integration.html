@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Discount eligibility verifier – embed and integrate</title>
+  <meta name="description" content="How to add wallet-based discount eligibility checks to a web shop, a booking flow or a kiosk.">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="./">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
+    <span>Discount eligibility verifier</span>
+  </a>
+  <nav class="site-nav" aria-label="Site">
+    <a href="./">Live demo</a>
+    <a href="integration.html" aria-current="page">Embed and integrate</a>
+    <a href="kiosk.html">Kiosk</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <p class="eyebrow">Embed and integrate</p>
+  <h1>Add wallet-based discount checks to your service</h1>
+  <p class="lede">Online, your backend starts a verification session and your page shows the <code>&lt;credential-verifier&gt;</code> web component. In person, open the ready-made kiosk page on a tablet at the counter. Either way, the verifier talks to the wallet and you get a signed result.</p>
+  <ul class="toc" aria-label="On this page">
+    <li><a href="#flow">How it works</a></li>
+    <li><a href="#session">1. Create a session</a></li>
+    <li><a href="#embed">2. Embed the component</a></li>
+    <li><a href="#result">3. Get the result</a></li>
+    <li><a href="#component">Component reference</a></li>
+    <li><a href="#kiosk">Kiosk</a></li>
+    <li><a href="#setup">Setting up a client</a></li>
+  </ul>
+</div>
+
+<main class="page">
+  <section id="flow" aria-labelledby="flow-title">
+    <h2 id="flow-title">How it works</h2>
+    <ol class="flow">
+      <li><span class="who">Your backend</span>Creates a session with its API key and gets a session id and a browser token.</li>
+      <li><span class="who">Your page</span>Shows the web component with that session. The component draws the QR code and the wallet buttons.</li>
+      <li><span class="who">Customer's wallet</span>Presents the credential. The verifier checks the issuer, the signature, holder binding and the eligibility rule.</li>
+      <li><span class="who">Your backend</span>Receives the signed result by webhook, or long-polls for it, and grants the discount.</li>
+    </ol>
+    <p class="note"><strong>Grant the discount only from the result your backend receives.</strong> The component's browser events are for showing feedback: anyone can fake them in their own browser.</p>
+  </section>
+
+  <section id="session" aria-labelledby="session-title">
+    <div class="section-head">
+      <h2 id="session-title">1. Create a session</h2>
+      <p>Call the verifier from your backend with your API key in the <code>Authorization</code> header. Never send the API key to a browser.</p>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3>Request</h3>
+        <pre><code>POST /api/sessions
+Authorization: Bearer &lt;apiKey&gt;
+Content-Type: application/json
+
+{
+  "accepted_types": ["pension", "student"],
+  "reference": "order-42",
+  "return_url": "https://shop.example/checkout"
+}</code></pre>
+      </div>
+      <div>
+        <h3>Response</h3>
+        <pre><code>{
+  "session_id": "…",
+  "browser_token": "…",
+  "wallet_url": "openid4vp://?…",
+  "same_device_wallet_url": "openid4vp://?…",
+  "accepted_types": ["pension", "student"],
+  "expires_at": "2026-11-25T10:05:00.000Z"
+}</code></pre>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Field</th><th scope="col">Meaning (all optional)</th></tr></thead>
+        <tbody>
+          <tr><td><code>accepted_types</code></td><td>Credential types that qualify, by their id in <code>credential-types.json</code>. Default: all configured types.</td></tr>
+          <tr><td><code>reference</code></td><td>Your own identifier, such as an order number. It comes back in the result.</td></tr>
+          <tr><td><code>return_url</code></td><td>Where the wallet returns the customer after a same-device flow. It must start with one of the client's <code>allowedReturnUrls</code>. Without it, there is no <code>same_device_wallet_url</code>.</td></tr>
+          <tr><td><code>client_id_prefix</code></td><td>How the verifier identifies itself to the wallet: <code>decentralized_identifier</code> (did:web, signed), <code>openid_federation</code> or <code>redirect_uri</code>. Default: the server's configuration.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Sessions expire after five minutes by default (<code>oid4vp.sessionTtlSeconds</code>). Pass <code>session_id</code> and <code>browser_token</code> to the page that shows the session.</p>
+  </section>
+
+  <section id="embed" aria-labelledby="embed-title">
+    <div class="section-head">
+      <h2 id="embed-title">2. Embed the component</h2>
+      <p>Load <code>verifier.js</code> from the verifier and place the element where the check belongs, for example next to the discount option at checkout. It has no dependencies and makes no requests to third parties.</p>
+    </div>
+    <pre><code>&lt;script type="module" src="https://verifier.example.com/verifier.js"&gt;&lt;/script&gt;
+
+&lt;credential-verifier
+    session-id="…" session-token="…"
+    lang="fi" sound="on"&gt;
+&lt;/credential-verifier&gt;
+
+&lt;script&gt;
+  document.querySelector('credential-verifier')
+    .addEventListener('verification-result', (e) =&gt; {
+      <span class="c">// Show feedback, then let your backend decide from the signed result.</span>
+      console.log(e.detail.outcome, e.detail.credentialType);
+    });
+&lt;/script&gt;</code></pre>
+    <p>Instead of <code>session-id</code> and <code>session-token</code>, you can set <code>start-url</code> to an endpoint of your own backend. The component POSTs to it and expects <code>{ "session_id", "browser_token" }</code> back. That way, the page can start a new session itself when the customer presses <em>Try again</em>.</p>
+    <p>The page's origin must be listed in the client's <code>allowedOrigins</code>, because the component calls the verifier from the browser and the Digital Credentials API binds the presentation to that origin.</p>
+  </section>
+
+  <section id="result" aria-labelledby="result-title">
+    <div class="section-head">
+      <h2 id="result-title">3. Get the result</h2>
+      <p>Either configure a <code>webhookUrl</code> for your client, or long-poll the session from your backend.</p>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3>Webhook</h3>
+        <p>When the session finishes, the verifier POSTs the signed result as <code>application/jwt</code>, with the session id in the <code>x-verifier-session</code> header. Failed deliveries are retried a few times within about 40 seconds.</p>
+      </div>
+      <div>
+        <h3>Long polling</h3>
+        <pre><code>GET /api/sessions/{id}?wait=25
+Authorization: Bearer &lt;apiKey&gt;</code></pre>
+        <p><code>wait</code> holds the request open for up to 30 seconds until the session finishes.</p>
+      </div>
+    </div>
+    <pre><code>{
+  "session_id": "…",
+  "reference": "order-42",
+  "status": "completed",
+  "outcome": "accepted",
+  "credential_type": "student",
+  "credential_issuer": { "entityId": "https://…", "organizationName": "…", "trustAnchor": "https://findy.trustregistry.eu" },
+  "claims": { "enrolment_status": "enrolled", "expiry_date": "2026-12-31" },
+  "valid_until": "2026-12-31T21:59:59.999Z",
+  "flow": "cross_device",
+  "result_jwt": "eyJ…"
+}</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col"><code>outcome</code></th><th scope="col">What to do</th></tr></thead>
+        <tbody>
+          <tr><td><code>accepted</code></td><td>Grant the discount. <code>valid_until</code> tells how long the entitlement lasts, when the credential says.</td></tr>
+          <tr><td><code>rejected</code></td><td>The credential did not qualify. <code>reasons</code> and <code>checks</code> say why.</td></tr>
+          <tr><td><code>error</code></td><td>A temporary failure, such as an unreachable federation. Let the customer try again.</td></tr>
+          <tr><td><code>wallet_error</code></td><td>The wallet cancelled or reported an error.</td></tr>
+          <tr><td><code>expired</code></td><td>Nobody answered before the session expired.</td></tr>
+          <tr><td><code>pending</code></td><td>Still waiting for the wallet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Verify the result JWT</h3>
+    <p>The result is signed by the verifier (<code>typ: eligibility-result+jwt</code>, <code>iss</code>: the verifier's public URL, <code>aud</code>: your client id). The keys are at <code>/.well-known/jwks.json</code>. Verify the signature whenever the result reaches you through a browser, for example in Node.js with <a href="https://github.com/panva/jose">jose</a>:</p>
+    <pre><code>import { createRemoteJWKSet, jwtVerify } from 'jose';
+
+const VERIFIER = 'https://verifier.example.com';
+const jwks = createRemoteJWKSet(new URL('/.well-known/jwks.json', VERIFIER));
+
+const { payload } = await jwtVerify(resultJwt, jwks, {
+  issuer: VERIFIER,
+  audience: 'demo-shop',             <span class="c">// your client id</span>
+  typ: 'eligibility-result+jwt',
+});
+if (payload.outcome === 'accepted') { <span class="c">/* grant the discount */</span> }</code></pre>
+    <p>After a same-device flow (<code>"flow": "same_device"</code>), rely on the result only when <code>same_device_confirmed</code> is <code>true</code>. It means the browser that started the session also received the wallet's response code, which defeats session fixation.</p>
+  </section>
+
+  <section id="component" aria-labelledby="component-title">
+    <h2 id="component-title">Component reference</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Attribute</th><th scope="col">Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>session-id</code>, <code>session-token</code></td><td>A session created by your backend (<code>session_id</code>, <code>browser_token</code>).</td></tr>
+          <tr><td><code>start-url</code></td><td>Or: a URL the component POSTs to, which returns <code>{ session_id, browser_token }</code>.</td></tr>
+          <tr><td><code>mode</code></td><td><code>embedded</code> (default) or <code>kiosk</code>: full screen, starts over after each result, never offers same-device options.</td></tr>
+          <tr><td><code>lang</code></td><td><code>fi</code>, <code>sv</code> or <code>en</code>. Default: the page language.</td></tr>
+          <tr><td><code>sound</code></td><td><code>on</code> or <code>off</code>: success and failure tones. Default: on in kiosk mode.</td></tr>
+          <tr><td><code>page-feedback</code></td><td><code>on</code> or <code>off</code>: turn the whole page green or red. Default: on in kiosk mode.</td></tr>
+          <tr><td><code>reset-after</code></td><td>Seconds before starting over after a result. Kiosk default from the configuration.</td></tr>
+          <tr><td><code>server</code></td><td>Verifier base URL. Default: where <code>verifier.js</code> was loaded from.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <h3>Events</h3>
+        <p><code>verification-status</code> fires as the session progresses and <code>verification-result</code> when it finishes. <code>event.detail</code> holds the display state: <code>status</code>, <code>outcome</code>, <code>credentialType</code>, <code>validUntil</code> and, when something failed, <code>reason</code>. The <a href="./#demo">live demo</a> prints them as they arrive.</p>
+        <h3>Same-device flows</h3>
+        <p>Outside kiosk mode, the component offers <em>Use a wallet on this device</em> when the browser supports the Digital Credentials API, and <em>Open wallet app</em> when the session has a same-device link. When the wallet returns the customer to <code>return_url</code>, the component picks up the result by itself.</p>
+      </div>
+      <div>
+        <h3>Theming</h3>
+        <p>The component draws inside a shadow root. Match it to your site with CSS custom properties. This site uses:</p>
+        <pre><code>credential-verifier {
+  --cv-accent: #0901b9;      <span class="c">/* buttons, spinner, focus */</span>
+  --cv-surface: #ffffff;
+  --cv-text: #282539;
+  --cv-font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --cv-radius: 28px;
+  <span class="c">/* also: --cv-accepted, --cv-rejected, --cv-error */</span>
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="kiosk" aria-labelledby="kiosk-title">
+    <div class="section-head">
+      <h2 id="kiosk-title">Kiosk</h2>
+      <p>For checks at a counter, open <a href="kiosk.html"><code>/kiosk.html</code></a> on a tablet or a customer-facing screen. It needs no backend of your own: it starts its own sessions, shows a large QR code, sounds a tone and colours the screen by the result, then starts over.</p>
+    </div>
+    <ul>
+      <li><code>?lang=fi|sv|en</code> sets the starting language. Customers can switch it from the header.</li>
+      <li><code>?sound=off</code> keeps it quiet and skips the <em>Tap to start</em> step that browsers need before they play sound.</li>
+      <li>The kiosk never offers a wallet on the same device, because the screen belongs to the shop, not to the customer.</li>
+      <li>Enable it with <code>kiosk.enabled</code>. <code>kiosk.acceptedTypes</code> chooses the credential types and <code>kiosk.resetAfterSeconds</code> how long a result stays on screen.</li>
+    </ul>
+  </section>
+
+  <section id="setup" aria-labelledby="setup-title">
+    <div class="section-head">
+      <h2 id="setup-title">Setting up a client</h2>
+      <p>The verifier's operator adds each service provider to <code>apiClients</code> in the configuration:</p>
+    </div>
+    <pre><code>apiClients:
+  - id: demo-shop                         <span class="c"># the aud of your result JWTs</span>
+    apiKey: ${DEMO_SHOP_API_KEY}          <span class="c"># a long random secret</span>
+    webhookUrl: https://shop.example/hooks/eligibility
+    allowedReturnUrls: [https://shop.example/checkout]
+    allowedOrigins: [https://shop.example]</code></pre>
+    <p>Running your own verifier, the configuration options and the credential type rules are described in the <a href="https://github.com/FindyFi/discount-eligibility-verifier#readme">README</a>.</p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <nav aria-label="Footer">
+    <a href="./">Live demo</a>
+    <a href="integration.html">Embed and integrate</a>
+    <a href="kiosk.html">Kiosk</a>
+    <a href="https://github.com/FindyFi/discount-eligibility-verifier">Source code</a>
+  </nav>
+  <span>Apache License 2.0</span>
+</footer>
+</body>
+</html>

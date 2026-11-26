@@ -185,10 +185,14 @@ They appear as a wallet × variant matrix and can be exported as Markdown or JSO
 
 ## Web component and kiosk page
 
-The service serves a dependency-free web component at `/verifier.js`, plus two pages:
+The service serves a dependency-free web component at `/verifier.js`, plus these pages:
 
+- `/` (`index.html`): live demo of the component, with its events. It starts sessions from the kiosk endpoint, so it needs `kiosk.enabled`.
+- `/integration.html`: how to embed the component and integrate a backend, for service providers.
 - `/kiosk.html`: full-screen kiosk. Use `?lang=fi|sv|en`, and `?sound=off` to skip the "tap to start" step that unlocks audio.
-- `/index.html`: demo and embedding example.
+
+The demo and integration pages share `public/site.css`, which follows the Findynet visual style. Its display font,
+Archivo (SIL Open Font License), is copied into `public/fonts/` by `npm run build:web`.
 
 ```html
 <script type="module" src="https://verifier.example.com/verifier.js"></script>

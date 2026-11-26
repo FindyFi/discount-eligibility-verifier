@@ -1,0 +1,334 @@
+/* Site pages (index.html, integration.html). The visual language follows findynet.fi, as Opintotodiste
+   does: electric blue, deep navy and cyan on a white page, a wide grotesk for display type (Archivo at
+   its widest standing in for Findynet's Loos Wide), pill buttons and large radii.
+   The font files are copied into fonts/archivo/ by tools/build-web.mjs; without them the pages fall back
+   to Helvetica. */
+
+@font-face {
+  font-family: 'Archivo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url(fonts/archivo/archivo-latin-ext-wdth-normal.woff2) format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Archivo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url(fonts/archivo/archivo-latin-wdth-normal.woff2) format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --blue: #0901b9;
+  --navy: #0d0342;
+  --navy-2: #0b064d;
+  --cyan: #8de4fe;
+
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-soft: #ebf9fd;
+  --hero-bg: #ebf9fd;
+  --text: #282539;
+  --heading: var(--navy);
+  --muted: #5b5870;
+  --line: #ececf2;
+  --line-strong: var(--navy);
+  --link: var(--blue);
+  --link-hover: var(--navy-2);
+  --primary-bg: var(--blue);
+  --primary-fg: #ffffff;
+  --primary-hover: var(--navy-2);
+  --focus: var(--blue);
+  --code-bg: var(--navy);
+  --code-fg: #ecebf7;
+  --code-muted: #a9a5d6;
+  --inline-code-bg: #f1f0f8;
+  --ok: #14622f;
+  --warn-bg: #fff4e5;
+  --warn-line: #ffd6a8;
+
+  --font-display: 'Archivo Variable', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --gutter: clamp(16px, 4vw, 64px);
+  --content: 1200px;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: var(--navy);
+    --surface: #16104f;
+    --surface-soft: #211a66;
+    --hero-bg: #16104f;
+    --text: #ecebf7;
+    --heading: #ffffff;
+    --muted: #b8b4d9;
+    --line: rgba(235, 249, 252, 0.12);
+    --line-strong: var(--cyan);
+    --link: var(--cyan);
+    --link-hover: #ffffff;
+    --primary-bg: var(--cyan);
+    --primary-fg: var(--navy);
+    --primary-hover: #c4f1ff;
+    --focus: var(--cyan);
+    --code-bg: #08022c;
+    --inline-code-bg: #211a66;
+    --ok: #9be7b6;
+    --warn-bg: #3a2410;
+    --warn-line: #7a4a1c;
+  }
+}
+
+/* ---------- base ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.6 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 800;
+  color: var(--heading);
+  line-height: 1.15;
+  margin: 0;
+}
+h2 { font-size: clamp(1.4rem, 3vw, 1.8rem); }
+h3 { font-size: 1.1rem; font-stretch: 112%; }
+
+p { margin: 0; }
+a { color: var(--link); text-underline-offset: 3px; }
+a:hover { color: var(--link-hover); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+strong { color: var(--heading); }
+.muted { color: var(--muted); }
+.small { font-size: .9rem; }
+
+code { font-family: var(--font-mono); font-size: .88em; }
+:not(pre) > code { padding: .1em .35em; border-radius: 6px; background: var(--inline-code-bg); color: var(--heading); overflow-wrap: anywhere; }
+pre {
+  margin: 0;
+  padding: 20px 24px;
+  overflow-x: auto;
+  border-radius: 20px;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  font-size: .9rem;
+  line-height: 1.55;
+}
+pre .c { color: var(--code-muted); }
+
+/* ---------- buttons ---------- */
+
+.button, .segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4em;
+  min-height: 48px;
+  padding: 0 1.4rem;
+  border: 2px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 700;
+  font-size: .95rem;
+  letter-spacing: .02em;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+.button:hover { background: var(--heading); color: var(--bg); }
+.button:focus-visible, .segmented button:focus-visible { border-radius: 999px; }
+.button.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary-fg); }
+.button.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+
+/* A row of pill toggles, e.g. the demo's language switch. */
+.segmented { display: inline-flex; gap: 2px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; }
+.segmented button { min-height: 36px; padding: 0 14px; border: 0; font-size: .85rem; }
+.segmented button:hover { background: var(--surface-soft); }
+.segmented button[aria-pressed="true"] { background: var(--heading); color: var(--bg); }
+
+/* ---------- layout ---------- */
+
+.topbar, .hero, .page, .site-footer {
+  width: min(100% - 2 * var(--gutter), var(--content));
+  margin-inline: auto;
+}
+
+.topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 32px; padding: 20px 0; }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--heading);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+.brand:hover { color: var(--heading); }
+.brand svg { color: var(--link); flex-shrink: 0; }
+.site-nav { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.site-nav a { font-weight: 700; color: var(--heading); text-decoration: none; }
+.site-nav a:hover, .site-nav a[aria-current="page"] { color: var(--link); text-decoration: underline; text-underline-offset: 6px; }
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(32px, 5vw, 56px) clamp(24px, 5vw, 64px);
+  border-radius: 40px;
+  background: var(--hero-bg);
+}
+.hero h1 { max-width: 22ch; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -.015em; }
+.hero .lede { max-width: 46rem; font-size: clamp(1.05rem, 2vw, 1.2rem); }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.eyebrow { font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--link); }
+
+.page { flex: 1; display: flex; flex-direction: column; gap: 72px; padding: 56px 0 80px; }
+.page > section { display: flex; flex-direction: column; gap: 20px; scroll-margin-top: 24px; }
+.page > section > p, .page > section > ul, .page > section > ol { max-width: 50rem; }
+.section-head { display: flex; flex-direction: column; gap: 10px; }
+.section-head p { max-width: 50rem; }
+
+.card { padding: 24px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); }
+.card h3 { margin-bottom: 8px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+
+.note {
+  padding: 16px 20px;
+  border: 1px solid var(--warn-line);
+  border-radius: 16px;
+  background: var(--warn-bg);
+}
+
+/* Numbered steps with a ringed counter. */
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 24px; counter-reset: step; }
+.steps > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 16px; row-gap: 6px; counter-increment: step; }
+.steps > li::before {
+  content: counter(step);
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+.steps > li > :first-child { align-self: center; }
+.steps > li > :not(:first-child) { grid-column: 2; }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+th, td { padding: 12px 16px 12px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { color: var(--heading); font-weight: 700; }
+td:first-child { white-space: nowrap; }
+td:first-child code { white-space: nowrap; overflow-wrap: normal; }
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-top: auto;
+  padding: 32px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .95rem;
+}
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.site-footer a { color: var(--muted); }
+.site-footer a:hover { color: var(--link); }
+
+/* ---------- the web component, themed through its custom properties ---------- */
+
+credential-verifier {
+  --cv-accent: var(--blue);
+  --cv-surface: var(--surface);
+  --cv-text: var(--text);
+  --cv-font: var(--font-body);
+  --cv-radius: 28px;
+}
+@media (prefers-color-scheme: dark) {
+  /* The component puts white text on its accent, so the dark theme keeps a blue rather than cyan. */
+  credential-verifier { --cv-accent: #4b44ff; }
+}
+
+/* ---------- live demo (index.html) ---------- */
+
+.demo { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
+.demo-stage { display: flex; flex-direction: column; gap: 12px; }
+.demo-stage credential-verifier { min-height: 560px; border: 1px solid var(--line); border-radius: 28px; box-shadow: 0 20px 50px rgba(13, 3, 66, .08); }
+.demo-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.demo-aside { display: flex; flex-direction: column; gap: 28px; }
+#log { min-height: 120px; max-height: 320px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+#log:empty::before { content: 'Events appear here as the session progresses.'; color: var(--code-muted); }
+
+/* ---------- integration flow (integration.html) ---------- */
+
+.flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 16px; counter-reset: flow; }
+.page .flow { max-width: none; }
+.flow li { position: relative; padding: 56px 20px 20px; border-radius: 24px; background: var(--hero-bg); counter-increment: flow; }
+.flow li::before {
+  content: counter(flow);
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--heading);
+  color: var(--bg);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: .9rem;
+}
+.flow .who { display: block; margin-bottom: 4px; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--link); }
+
+.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.toc a { display: inline-block; padding: 6px 14px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--heading); font-weight: 700; font-size: .9rem; text-decoration: none; }
+.toc a:hover { background: var(--heading); color: var(--bg); }
+
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 24px; align-items: start; }
+.two-col > div { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.two-col h3:not(:first-child) { margin-top: 16px; }
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 900px) {
+  .demo { grid-template-columns: 1fr; }
+  .demo-stage credential-verifier { min-height: 480px; }
+}
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .hero { border-radius: 28px; }
+  pre { padding: 16px; border-radius: 16px; font-size: .82rem; }
+  td:first-child { white-space: normal; }
+}

@@ -3,68 +3,145 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Credential verifier</title>
-  <style>
-    :root { color-scheme: light; --text: #1b1f24; --muted: #57606a; --line: #d0d7de; --code: #f6f8fa; }
-    body { margin: 0; background: #fff; color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-    main { max-width: 880px; margin: 0 auto; padding: 32px 16px 64px; }
-    h1 { font-size: 1.8rem; margin: 0 0 4px; }
-    h2 { font-size: 1.2rem; margin: 40px 0 8px; }
-    p.lead { color: var(--muted); margin-top: 0; }
-    .demo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-    @media (max-width: 720px) { .demo { grid-template-columns: 1fr; } }
-    credential-verifier { border: 1px solid var(--line); border-radius: 16px; }
-    pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: .85rem; margin: 0; }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    #log { min-height: 140px; max-height: 320px; }
-    a { color: #0550ae; }
-  </style>
+  <meta name="color-scheme" content="light dark">
+  <title>Discount eligibility verifier – live demo</title>
+  <meta name="description" content="Try the discount eligibility verifier: present a pensioner or student credential from an EUDI-compatible wallet.">
+  <link rel="stylesheet" href="site.css">
   <script type="module" src="verifier.js"></script>
 </head>
 <body>
-<main>
-  <h1>Credential verifier</h1>
-  <p class="lead">Checks pensioner and student credentials from EUDI-compatible wallets, with issuers trusted through OpenID Federation.</p>
-  <p><a href="kiosk.html">Open the kiosk page</a>. The integration API is described in the project README.</p>
+<header class="topbar">
+  <a class="brand" href="./">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
+    <span>Discount eligibility verifier</span>
+  </a>
+  <nav class="site-nav" aria-label="Site">
+    <a href="./" aria-current="page">Live demo</a>
+    <a href="integration.html">Embed and integrate</a>
+    <a href="kiosk.html">Kiosk</a>
+  </nav>
+</header>
 
-  <h2>Live demo</h2>
-  <p>This demo starts sessions from the kiosk endpoint, so it works only when <code>kiosk.enabled</code> is set. Your own page would start sessions from your backend instead.</p>
-  <div class="demo">
-    <credential-verifier id="demo" start-url="public/kiosk/sessions" sound="on" lang="en"></credential-verifier>
-    <div>
-      <p><strong>Events</strong></p>
-      <pre id="log" aria-live="polite"></pre>
-    </div>
+<div class="hero">
+  <p class="eyebrow">Live demo</p>
+  <h1>Prove you qualify for a discount, straight from your wallet</h1>
+  <p class="lede">The verifier checks pensioner and student credentials presented from EUDI-compatible wallets over OpenID4VP. It trusts issuers through OpenID Federation and asks only for what the discount needs: no name and no date of birth.</p>
+  <div class="actions">
+    <a class="button primary" href="#demo">Try it now</a>
+    <a class="button" href="integration.html">Add it to your service</a>
   </div>
+</div>
 
-  <h2>Embed it</h2>
-  <p>Your backend creates the session with its API key, then hands the session id and browser token to the page:</p>
-  <pre><code>&lt;script type="module" src="https://verifier.example.com/verifier.js"&gt;&lt;/script&gt;
+<main class="page">
+  <section id="demo" aria-labelledby="demo-title">
+    <div class="section-head">
+      <h2 id="demo-title">Present a credential</h2>
+      <p class="muted">This is the same web component that shops and kiosks embed. The events your page would receive appear next to it.</p>
+    </div>
+    <div class="demo">
+      <div class="demo-stage">
+        <credential-verifier id="verifier" start-url="public/kiosk/sessions" sound="on" lang="en"></credential-verifier>
+        <div class="demo-controls">
+          <div class="segmented" role="group" aria-label="Component language">
+            <button type="button" data-lang="fi" aria-pressed="false">Suomi</button>
+            <button type="button" data-lang="sv" aria-pressed="false">Svenska</button>
+            <button type="button" data-lang="en" aria-pressed="true">English</button>
+          </div>
+          <a class="small" href="kiosk.html">Open the full-screen kiosk</a>
+        </div>
+      </div>
 
-&lt;credential-verifier
-    session-id="…" session-token="…"
-    lang="fi" sound="on" page-feedback="off"&gt;
-&lt;/credential-verifier&gt;
+      <div class="demo-aside">
+        <ol class="steps">
+          <li>
+            <h3>Get a credential</h3>
+            <p>A student status credential from <a href="https://opintotodiste.findy.fi/">Opintotodiste</a>, or a pension credential from the Kela demo issuer. The <a href="https://opintotodiste.findy.fi/guide/wallet">wallet guide</a> lists suitable wallets.</p>
+          </li>
+          <li>
+            <h3>Scan the code</h3>
+            <p>Scan the QR code with your wallet app. On a phone whose browser supports the Digital Credentials API, choose <em>Use a wallet on this device</em> instead.</p>
+          </li>
+          <li>
+            <h3>Approve in the wallet</h3>
+            <p>The wallet shows which details will be shared. Only the claims the eligibility rule needs are requested.</p>
+          </li>
+          <li>
+            <h3>See the result</h3>
+            <p>The card turns green or red. In the event log, <code>verification-result</code> carries the outcome.</p>
+          </li>
+        </ol>
+        <div>
+          <h3 id="log-title">Events</h3>
+          <pre id="log" aria-live="polite" aria-labelledby="log-title"></pre>
+        </div>
+      </div>
+    </div>
+    <p class="small muted">The demo starts its sessions from the kiosk endpoint, so it works only when <code>kiosk.enabled</code> is set. Your own pages start sessions from your backend: see <a href="integration.html">Embed and integrate</a>.</p>
+  </section>
 
-&lt;script&gt;
-  document.querySelector('credential-verifier')
-    .addEventListener('verification-result', (e) =&gt; {
-      // Show feedback. Grant the discount only from the result your backend receives
-      // (webhook or GET /api/sessions/{id}), never from this browser event alone.
-      console.log(e.detail.outcome, e.detail.credentialType);
-    });
-&lt;/script&gt;</code></pre>
-  <p>Alternatively, set <code>start-url</code> to an endpoint of your backend that creates a session and returns <code>{ "session_id", "browser_token" }</code>.</p>
+  <section aria-labelledby="checks-title">
+    <div class="section-head">
+      <h2 id="checks-title">What the verifier checks</h2>
+      <p>A credential is accepted only when every check passes. When one fails, the result says which one and why.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <h3>Trusted issuer</h3>
+        <p>The issuer must have a valid OpenID Federation trust chain to a configured trust anchor, such as Findynet's <code>findy.trustregistry.eu</code>. Individual did:web issuers can also be trusted directly.</p>
+      </div>
+      <div class="card">
+        <h3>Issuer signature</h3>
+        <p>The SD-JWT credential must be signed with a key that the issuer publishes in its trusted metadata. Every disclosed claim must match its digest.</p>
+      </div>
+      <div class="card">
+        <h3>Holder binding</h3>
+        <p>The wallet signs this request's nonce with the key the credential is bound to. A copied credential cannot be replayed.</p>
+      </div>
+      <div class="card">
+        <h3>Validity</h3>
+        <p>The credential must be valid now. A rule can also require a date claim, such as a student card's <code>expiry_date</code>, still to be in the future.</p>
+      </div>
+      <div class="card">
+        <h3>Eligibility rule</h3>
+        <p>The disclosed claims must meet the rule for the credential type, for example <code>Voimassa: true</code> for a pension or <code>enrolment_status: enrolled</code> for a student.</p>
+      </div>
+      <div class="card">
+        <h3>Signed result</h3>
+        <p>The verifier signs the outcome for your backend. Grant the discount from that result, never from the browser alone.</p>
+      </div>
+    </div>
+  </section>
 </main>
+
+<footer class="site-footer">
+  <nav aria-label="Footer">
+    <a href="./">Live demo</a>
+    <a href="integration.html">Embed and integrate</a>
+    <a href="kiosk.html">Kiosk</a>
+    <a href="https://github.com/FindyFi/discount-eligibility-verifier">Source code</a>
+  </nav>
+  <span>Apache License 2.0</span>
+</footer>
+
 <script>
+  const verifier = document.getElementById('verifier');
+
   const log = document.getElementById('log');
   for (const type of ['verification-status', 'verification-result']) {
-    document.getElementById('demo').addEventListener(type, (e) => {
+    verifier.addEventListener(type, (e) => {
       const { status, outcome, credentialType, validUntil, reason } = e.detail;
       const line = JSON.stringify({ status, outcome, credentialType, validUntil, reason }, (k, v) => (v === undefined ? undefined : v));
       log.textContent = `${type}: ${line}\n` + log.textContent;
     });
   }
+
+  const langs = document.querySelector('.segmented');
+  langs.addEventListener('click', (e) => {
+    const lang = e.target.closest('button')?.dataset.lang;
+    if (!lang) return;
+    verifier.setAttribute('lang', lang);
+    for (const b of langs.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+  });
 </script>
 </body>
 </html>
