@@ -5,7 +5,7 @@
 import { qrSvg } from './qr.js';
 
 interface Variant {
-  clientIdPrefix: 'redirect_uri' | 'openid_federation';
+  clientIdPrefix: 'redirect_uri' | 'openid_federation' | 'decentralized_identifier' | 'legacy_redirect_uri';
   requestMode: 'value' | 'reference';
 }
 interface Info {
@@ -48,7 +48,13 @@ const TOKEN_KEY = 'compat-token';
 const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const variantKey = (v: Variant) => `${v.clientIdPrefix}/${v.requestMode}`;
-const variantLabel = (v: Variant) => (v.clientIdPrefix === 'openid_federation' ? 'openid_federation (signed, by reference)' : `redirect_uri · ${v.requestMode === 'value' ? 'in QR' : 'by reference'}`);
+const variantLabel = (v: Variant) => {
+  const how = v.requestMode === 'value' ? 'in QR' : 'by reference';
+  if (v.clientIdPrefix === 'openid_federation') return 'openid_federation (signed, by reference)';
+  if (v.clientIdPrefix === 'decentralized_identifier') return 'decentralized_identifier (did:web, signed, by reference)';
+  if (v.clientIdPrefix === 'legacy_redirect_uri') return `legacy redirect_uri (client_id_scheme, pre-1.0) · ${how}`;
+  return `redirect_uri · ${how}`;
+};
 const TERMINAL = new Set(['completed', 'failed', 'expired']);
 
 let token = '';
@@ -95,8 +101,10 @@ function renderSetup() {
   $('#variants').innerHTML = info!.variants
     .map((v, i) => `<li><button type="button" data-variant="${i}">Run</button> <span>${esc(variantLabel(v))}</span></li>`)
     .join('');
-  if (!info!.variants.some((v) => v.clientIdPrefix === 'openid_federation')) {
-    $('#variants').insertAdjacentHTML('beforeend', '<li class="muted">openid_federation is not configured on this verifier</li>');
+  for (const p of ['openid_federation', 'decentralized_identifier'] as const) {
+    if (!info!.variants.some((v) => v.clientIdPrefix === p)) {
+      $('#variants').insertAdjacentHTML('beforeend', `<li class="muted">${p} is not configured on this verifier</li>`);
+    }
   }
 }
 

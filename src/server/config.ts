@@ -5,9 +5,15 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import type { JWK } from 'jose';
-import type { CredentialTypePolicy, TrustAnchorConfig } from '../core/index.js';
+import type { CredentialTypePolicy, TrustAnchorConfig, TrustedDidIssuer } from '../core/index.js';
 
-export type ClientIdPrefix = 'redirect_uri' | 'openid_federation';
+/**
+ * - redirect_uri: OpenID4VP 1.0 default, unsigned.
+ * - openid_federation, decentralized_identifier: signed request objects, always passed by reference.
+ * - legacy_redirect_uri: pre-1.0 drafts (client_id_scheme=redirect_uri with a bare client_id), for wallets that predate prefixes.
+ */
+export type ClientIdPrefix = 'redirect_uri' | 'openid_federation' | 'decentralized_identifier' | 'legacy_redirect_uri';
+export const CLIENT_ID_PREFIXES: ClientIdPrefix[] = ['redirect_uri', 'openid_federation', 'decentralized_identifier', 'legacy_redirect_uri'];
 
 export interface ApiClient {
   id: string;
@@ -41,6 +47,13 @@ export interface FederationConfig {
   includeTrustChain: boolean;
 }
 
+export interface DidWebConfig {
+  /** The verifier's DID, derived from publicUrl (did:web:<host>). Its document is served at /.well-known/did.json. */
+  did: string;
+  /** Private JWK that signs request objects; its public part is published in the DID document. */
+  requestSigningKey: JWK;
+}
+
 export interface ServiceConfig {
   publicUrl: string;
   port: number;
@@ -48,6 +61,8 @@ export interface ServiceConfig {
   credentialTypes: CredentialTypePolicy[];
   timeZone: string;
   allowJwtVcIssuerMetadata: boolean;
+  /** did:web issuers trusted directly, without a federation trust chain. */
+  trustedDidIssuers: TrustedDidIssuer[];
   oid4vp: {
     clientIdPrefix: ClientIdPrefix;
     /** "value": all parameters in the QR/link; "reference": a short link with request_uri. */
@@ -58,6 +73,8 @@ export interface ServiceConfig {
   };
   /** Present when the verifier is an OpenID Federation entity (needed for the openid_federation client ID prefix). */
   federation?: FederationConfig;
+  /** Present when the verifier has a did:web identity (needed for the decentralized_identifier client ID prefix). */
+  didWeb?: DidWebConfig;
   dcApi: { enabled: boolean; allowedOrigins: string[] };
   kiosk: { enabled: boolean; acceptedTypes?: string[]; resetAfterSeconds: number };
   apiClients: ApiClient[];
@@ -114,7 +131,7 @@ export async function normalizeConfig(raw: Record<string, any>, baseDir = proces
   if (trustAnchors.length === 0) errors.push('trustAnchors must list at least one trust anchor');
 
   const prefix = raw.oid4vp?.clientIdPrefix ?? 'redirect_uri';
-  if (!['redirect_uri', 'openid_federation'].includes(prefix)) errors.push(`oid4vp.clientIdPrefix "${prefix}" is not supported`);
+  if (!CLIENT_ID_PREFIXES.includes(prefix)) errors.push(`oid4vp.clientIdPrefix "${prefix}" is not supported`);
 
   let federation: FederationConfig | undefined;
   if (raw.federation) {
@@ -142,6 +159,22 @@ export async function normalizeConfig(raw: Record<string, any>, baseDir = proces
       includeTrustChain: f.includeTrustChain ?? true,
     };
   }
+  let didWeb: DidWebConfig | undefined;
+  if (raw.didWeb) {
+    const u = /^https:\/\//.test(publicUrl) ? new URL(publicUrl) : undefined;
+    if (!u || u.pathname !== '/' || u.search || u.hash) errors.push('didWeb needs publicUrl to be an https URL without a path (the DID document is served at /.well-known/did.json)');
+    const requestSigningKey = parseJwk(raw.didWeb.requestSigningKey ?? process.env.DID_WEB_KEY, 'didWeb.requestSigningKey (or DID_WEB_KEY)', errors);
+    if (u && requestSigningKey) didWeb = { did: `did:web:${u.host.replace(':', '%3A')}`, requestSigningKey };
+  }
+  if (prefix === 'decentralized_identifier' && !raw.didWeb) errors.push('oid4vp.clientIdPrefix "decentralized_identifier" requires a didWeb section');
+
+  const trustedDidIssuers: TrustedDidIssuer[] = [];
+  for (const t of Array.isArray(raw.trustedDidIssuers) ? raw.trustedDidIssuers : []) {
+    const entry = typeof t === 'string' ? { did: t } : t;
+    if (!entry || typeof entry.did !== 'string' || !/^did:web:[^#?\s]+$/.test(entry.did)) errors.push(`trustedDidIssuers entry ${JSON.stringify(t)} needs a did:web identifier`);
+    else trustedDidIssuers.push({ did: entry.did, name: entry.name, organizationName: entry.organizationName });
+  }
+
   if (raw.compat?.enabled && String(raw.compat?.token ?? '').length < 16) errors.push('compat.token must be at least 16 characters when compat.enabled is set');
   if (prefix === 'openid_federation' && !federation) errors.push('oid4vp.clientIdPrefix "openid_federation" requires a federation section');
 
@@ -168,6 +201,7 @@ export async function normalizeConfig(raw: Record<string, any>, baseDir = proces
     credentialTypes,
     timeZone: raw.timeZone ?? 'Europe/Helsinki',
     allowJwtVcIssuerMetadata: raw.allowJwtVcIssuerMetadata ?? true,
+    trustedDidIssuers,
     oid4vp: {
       clientIdPrefix: prefix,
       // By reference by default: short QR codes, and Heidi rejects requests passed in the QR code.
@@ -179,6 +213,7 @@ export async function normalizeConfig(raw: Record<string, any>, baseDir = proces
     dcApi: { enabled: raw.dcApi?.enabled ?? true, allowedOrigins: raw.dcApi?.allowedOrigins ?? [] },
     kiosk: { enabled: raw.kiosk?.enabled ?? false, acceptedTypes: raw.kiosk?.acceptedTypes, resetAfterSeconds: Number(raw.kiosk?.resetAfterSeconds ?? 8) },
     federation,
+    didWeb,
     apiClients,
     resultSigningKey,
     corsOrigins: raw.corsOrigins ?? [],

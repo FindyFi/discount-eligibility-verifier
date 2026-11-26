@@ -16,13 +16,13 @@ import { clientMetadata, responseUri, SIGNING_ALGS } from './oid4vp.js';
 
 export const SELF_ISSUED_AUDIENCE = 'https://self-issued.me/v2';
 
-interface LoadedKey {
+export interface LoadedKey {
   key: CryptoKey;
   publicJwk: JWK;
   alg: string;
 }
 
-async function loadKey(privateJwk: JWK): Promise<LoadedKey> {
+export async function loadKey(privateJwk: JWK): Promise<LoadedKey> {
   const alg = privateJwk.alg ?? (privateJwk.kty === 'OKP' ? 'EdDSA' : 'ES256');
   const key = (await importJWK(privateJwk, alg)) as CryptoKey;
   const { d: _d, p: _p, q: _q, dp: _dp, dq: _dq, qi: _qi, ...pub } = privateJwk;

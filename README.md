@@ -132,10 +132,36 @@ The entity configuration is served at `/.well-known/openid-federation`.
 - OpenID4VP 1.0 does not say which entity type holds verifier metadata, so the same metadata, including the request signing key in `jwks`, is published under each type in `metadataEntityTypes`. The default is `openid_credential_verifier` and `openid_relying_party`.
 - Key binding must name the full client ID, `openid_federation:<entity id>`; the bare entity ID is also accepted.
 
+## did:web client identifier (`decentralized_identifier`)
+
+A second way to let wallets authenticate the verifier, without a federation: the verifier has a `did:web` identity and signs its requests with a key from the DID document.
+
+1. Generate a key with `npm run keygen` and set `DID_WEB_KEY`.
+2. Uncomment the `didWeb` section in the configuration. `publicUrl` must be https and have no path; the DID is `did:web:<host>`.
+3. The DID document is served at `/.well-known/did.json`. Requests are signed (`kid` is `<did>#key-1`) and passed by reference.
+4. Choose the prefix per session with `"client_id_prefix": "decentralized_identifier"`, or make it the default with `oid4vp.clientIdPrefix`.
+
+Key binding must name `decentralized_identifier:<did>`; the bare DID is also accepted.
+
+## Trusting did:web issuers directly
+
+Some issuers, such as Procivis, identify themselves with a `did:web` instead of a federation entity ID, so no trust chain can vouch for them.
+List the ones you trust in `trustedDidIssuers`:
+
+```yaml
+trustedDidIssuers:
+  - did: did:web:issuer.example:ssi:did-web:v1:7816b6a8
+    name: Kela demo issuer
+```
+
+For a listed issuer the verifier skips the federation check, fetches its DID document over HTTPS and verifies the credential signature with the keys under `assertionMethod`.
+An issuer that is not listed is still rejected. Treat the list as a trust anchor of its own: a listed issuer is accepted on the strength of your list and TLS for its domain, not of a registry.
+
 ## Wallet compatibility tester
 
 `/compat.html` helps test which wallets work with which request variants:
-`redirect_uri` with the request in the QR code, `redirect_uri` by reference, and `openid_federation` when it is configured.
+`redirect_uri` with the request in the QR code and by reference, a legacy `redirect_uri` variant (pre-1.0 drafts: `client_id_scheme=redirect_uri` with a bare `client_id`, by value and by reference),
+and `openid_federation` and `decentralized_identifier` when they are configured.
 Enable it with `compat.enabled` and a `compat.token`, which the tester enters on the page.
 
 1. Choose the wallet, its version and platform, and the credential the wallet holds.

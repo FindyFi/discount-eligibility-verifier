@@ -8,6 +8,7 @@ import { Hono } from 'hono';
 import { Verifier } from '../core/index.js';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
+import { VerifierDid } from './did-entity.js';
 import { VerifierEntity } from './federation-entity.js';
 import { createResultSigner } from './results.js';
 import { MemorySessionStore } from './sessions.js';
@@ -26,9 +27,11 @@ const verifier = new Verifier({
   credentialTypes: config.credentialTypes,
   timeZone: config.timeZone,
   allowJwtVcIssuerMetadata: config.allowJwtVcIssuerMetadata,
+  trustedDidIssuers: config.trustedDidIssuers,
 });
 const entity = config.federation ? VerifierEntity.create(config, verifier.federation, log) : undefined;
-root.route('/', createApp({ config, store, signer, verifier, entity, log }));
+const did = config.didWeb ? VerifierDid.create(config) : undefined;
+root.route('/', createApp({ config, store, signer, verifier, entity, did, log }));
 const staticDir = process.env.STATIC_DIR ?? 'public';
 if (existsSync(staticDir)) root.use('/*', serveStatic({ root: staticDir }));
 
@@ -37,6 +40,8 @@ const server = serve({ fetch: root.fetch, port: config.port }, (info) => {
   console.log(`[verifier] trust anchors: ${config.trustAnchors.map((t) => t.entityId).join(', ')}; credential types: ${config.credentialTypes.map((t) => t.id).join(', ')}`);
   console.log(`[verifier] default client_id prefix: ${config.oid4vp.clientIdPrefix}`);
   if (entity) void reportFederationStatus(entity);
+  if (config.didWeb) console.log(`[verifier] did:web identity ${config.didWeb.did}, document at ${config.publicUrl}/.well-known/did.json`);
+  if (config.trustedDidIssuers.length) console.log(`[verifier] trusted did:web issuers: ${config.trustedDidIssuers.map((t) => t.did).join(', ')}`);
 });
 
 /** Tells the operator whether the verifier is registered in the federation, and what to register. */

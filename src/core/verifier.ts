@@ -1,6 +1,7 @@
 /**
  * Verifies an SD-JWT VC presentation end to end and evaluates discount eligibility.
  */
+import { DidResolutionError, didDocumentKeys, resolveDidWeb } from './did-web.js';
 import { FederationResolver, type TrustAnchorConfig } from './federation.js';
 import { resolveIssuerKeys } from './issuer-keys.js';
 import { verifyKeyBinding } from './keybinding.js';
@@ -21,7 +22,18 @@ export interface VerifierConfig {
   /** What to do with credentials carrying a `status` claim until status lists are supported. Default "reject". */
   unsupportedStatus?: 'reject' | 'accept';
   keyBindingMaxAgeSeconds?: number;
+  /**
+   * did:web issuers trusted directly, without a federation trust chain. Their DID document supplies the signing keys.
+   * Trust rests on the operator's list and on TLS for the DID's domain.
+   */
+  trustedDidIssuers?: TrustedDidIssuer[];
   fetch?: Fetcher;
+}
+
+export interface TrustedDidIssuer {
+  did: string;
+  name?: string;
+  organizationName?: string;
 }
 
 export interface VerificationExpectations {
@@ -151,22 +163,38 @@ export class Verifier {
 
       // 5. Issuer trust
       const iss = payload.iss;
-      if (!isHttpsUrl(iss)) throw new CheckFailed('issuer_trust', `Issuer ${JSON.stringify(iss)} is not an https entity identifier, so it cannot be checked against the federation`);
-      const chain = await this.federation.resolve(iss);
-      if (!chain.ok) throw new CheckFailed('issuer_trust', `Issuer is not trusted: ${chain.errors.join('; ')}`, chain.transient);
-      const fe = isObject(chain.metadata.federation_entity) ? chain.metadata.federation_entity : {};
-      result.issuer = {
-        entityId: iss,
-        name: str(fe.display_name),
-        organizationName: str(fe.organization_name),
-        logoUri: str(fe.logo_uri),
-        trustAnchor: chain.trustAnchor,
-      };
-      pass('issuer_trust', `Trust chain of ${chain.chain.length} statements to ${chain.trustAnchor}`);
+      const trustedDid = typeof iss === 'string' ? this.config.trustedDidIssuers?.find((t) => t.did === iss) : undefined;
+      let keySets: { jwks: { keys?: unknown[] }; source: string }[];
+      if (trustedDid) {
+        let doc;
+        try {
+          doc = await resolveDidWeb(trustedDid.did, this.config.fetch ?? ((u, i) => fetch(u, i)));
+        } catch (e) {
+          throw new CheckFailed('issuer_trust', `Trusted issuer ${trustedDid.did} could not be resolved: ${(e as Error).message}`, e instanceof DidResolutionError && e.transient);
+        }
+        result.issuer = { entityId: trustedDid.did, name: trustedDid.name, organizationName: trustedDid.organizationName, trustAnchor: 'configured trusted issuer' };
+        pass('issuer_trust', `${trustedDid.did} is on the configured list of trusted did:web issuers`);
+        keySets = [{ jwks: didDocumentKeys(doc), source: 'did:web document' }];
+      } else {
+        if (!isHttpsUrl(iss)) {
+          throw new CheckFailed('issuer_trust', `Issuer ${JSON.stringify(iss)} is not an https entity identifier, so it cannot be checked against the federation${typeof iss === 'string' && iss.startsWith('did:') ? ' and is not a configured trusted did:web issuer' : ''}`);
+        }
+        const chain = await this.federation.resolve(iss);
+        if (!chain.ok) throw new CheckFailed('issuer_trust', `Issuer is not trusted: ${chain.errors.join('; ')}`, chain.transient);
+        const fe = isObject(chain.metadata.federation_entity) ? chain.metadata.federation_entity : {};
+        result.issuer = {
+          entityId: iss,
+          name: str(fe.display_name),
+          organizationName: str(fe.organization_name),
+          logoUri: str(fe.logo_uri),
+          trustAnchor: chain.trustAnchor,
+        };
+        pass('issuer_trust', `Trust chain of ${chain.chain.length} statements to ${chain.trustAnchor}`);
+        keySets = await resolveIssuerKeys(chain, { fetch: this.config.fetch, allowJwtVcIssuerMetadata: this.config.allowJwtVcIssuerMetadata ?? true });
+      }
 
-      // 6. Signature with federation-anchored keys
-      const keySets = await resolveIssuerKeys(chain, { fetch: this.config.fetch, allowJwtVcIssuerMetadata: this.config.allowJwtVcIssuerMetadata ?? true });
-      if (keySets.length === 0) throw new CheckFailed('signature', 'Issuer publishes no credential signing keys in its federation metadata');
+      // 6. Signature with trusted keys
+      if (keySets.length === 0 || keySets.every((k) => !(k.jwks.keys?.length))) throw new CheckFailed('signature', trustedDid ? 'The issuer\'s DID document lists no assertion keys' : 'Issuer publishes no credential signing keys in its federation metadata');
       const errors: string[] = [];
       let verifiedWith: string | undefined;
       for (const ks of keySets) {

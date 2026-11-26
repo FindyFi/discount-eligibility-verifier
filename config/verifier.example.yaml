@@ -22,7 +22,7 @@ timeZone: Europe/Helsinki
 allowJwtVcIssuerMetadata: true
 
 oid4vp:
-  clientIdPrefix: redirect_uri      # default for new sessions: redirect_uri or openid_federation (needs the federation section)
+  clientIdPrefix: redirect_uri      # default for new sessions: redirect_uri, openid_federation (needs federation) or decentralized_identifier (needs didWeb)
   requestMode: reference            # reference (default): short QR + request_uri; value: everything in the QR code
   walletUrlScheme: openid4vp://
   sessionTtlSeconds: 300
@@ -43,6 +43,18 @@ oid4vp:
 #   metadataEntityTypes: [openid_credential_verifier, openid_relying_party]
 #   entityConfigurationTtlSeconds: 86400
 #   includeTrustChain: true
+
+# The verifier as a did:web identity, for the decentralized_identifier client_id prefix.
+# publicUrl must be https without a path; the DID is did:web:<host> and its document is served at /.well-known/did.json.
+# didWeb:
+#   requestSigningKey: ${DID_WEB_KEY}   # private JWK (npm run keygen); signs request objects, public part is in the DID document
+
+# did:web issuers to trust directly, without an OpenID Federation trust chain. Only list issuers you have vetted:
+# their credentials are accepted on the strength of this list and TLS for the DID's domain.
+# trustedDidIssuers:
+#   - did: did:web:procivis.staging.findy.fi:ssi:did-web:v1:7816b6a8-bfcc-465e-9d35-451b41b82fe6
+#     name: Kela demo issuer           # optional, shown as the issuer name
+#     organizationName: Kela
 
 # Digital Credentials API (browser-mediated wallet access, origin-bound).
 dcApi:

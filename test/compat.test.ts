@@ -41,6 +41,8 @@ describe('access', () => {
     expect(info.variants).toEqual([
       { clientIdPrefix: 'redirect_uri', requestMode: 'value' },
       { clientIdPrefix: 'redirect_uri', requestMode: 'reference' },
+      { clientIdPrefix: 'legacy_redirect_uri', requestMode: 'value' },
+      { clientIdPrefix: 'legacy_redirect_uri', requestMode: 'reference' },
     ]);
   });
 

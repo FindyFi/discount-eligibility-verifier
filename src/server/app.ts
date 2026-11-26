@@ -22,13 +22,15 @@ import { timingSafeEqual } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { Verifier, type CredentialTypePolicy, type Fetcher, type VerificationResult } from '../core/index.js';
-import type { ApiClient, ClientIdPrefix, ServiceConfig } from './config.js';
+import { CLIENT_ID_PREFIXES, type ApiClient, type ClientIdPrefix, type ServiceConfig } from './config.js';
+import { VerifierDid } from './did-entity.js';
 import { CompatStore, deriveVerdict, describeVpToken, keyBindingDiagnostics, type Variant } from './compat.js';
 import { VerifierEntity } from './federation-entity.js';
 import {
   authorizationRequestParams,
   dcApiRequest,
   extractPresentations,
+  isSignedPrefix,
   originAudiences,
   presentationAudiences,
   requestObjectClaims,
@@ -45,6 +47,8 @@ export interface AppDeps {
   verifier?: Verifier;
   /** The verifier's federation entity; created from config.federation when omitted. */
   entity?: Promise<VerifierEntity>;
+  /** The verifier's did:web identity; created from config.didWeb when omitted. */
+  did?: Promise<VerifierDid>;
   fetch?: Fetcher;
   log?: (msg: string) => void;
 }
@@ -60,9 +64,11 @@ export function createApp(deps: AppDeps) {
       credentialTypes: config.credentialTypes,
       timeZone: config.timeZone,
       allowJwtVcIssuerMetadata: config.allowJwtVcIssuerMetadata,
+      trustedDidIssuers: config.trustedDidIssuers,
       fetch: deps.fetch,
     });
   const entity = deps.entity ?? (config.federation ? VerifierEntity.create(config, verifier.federation, log) : undefined);
+  const did = deps.did ?? (config.didWeb ? VerifierDid.create(config) : undefined);
   const policiesFor = (s: Session): CredentialTypePolicy[] => config.credentialTypes.filter((p) => s.acceptedTypes.includes(p.id));
   const selfOrigin = new URL(config.publicUrl).origin;
   const browserOrigins = new Set([
@@ -87,6 +93,11 @@ export function createApp(deps: AppDeps) {
   app.get('/.well-known/openid-federation', async (c) => {
     if (!entity) return c.json({ error: 'not_found' }, 404);
     return c.body(await (await entity).entityConfiguration(), 200, { 'content-type': 'application/entity-statement+jwt' });
+  });
+
+  app.get('/.well-known/did.json', async (c) => {
+    if (!did) return c.json({ error: 'not_found' }, 404);
+    return c.body(JSON.stringify((await did).didDocument()), 200, { 'content-type': 'application/did+json' });
   });
 
   // ---------- Integration API ----------
@@ -208,8 +219,13 @@ export function createApp(deps: AppDeps) {
     });
     const params = authorizationRequestParams(config, s, policiesFor(s));
     params.state = c.req.param('state');
+    const claims = requestObjectClaims(params);
     const requestObject =
-      s.clientIdPrefix === 'openid_federation' ? await (await entity!).signRequestObject(requestObjectClaims(params)) : unsignedRequestObject(params);
+      s.clientIdPrefix === 'openid_federation'
+        ? await (await entity!).signRequestObject(claims)
+        : s.clientIdPrefix === 'decentralized_identifier'
+          ? await (await did!).signRequestObject(claims)
+          : unsignedRequestObject(params);
     return c.body(requestObject, 200, { 'content-type': 'application/oauth-authz-req+jwt' });
   });
 
@@ -301,7 +317,7 @@ export function createApp(deps: AppDeps) {
       walletVersion: optionalString(body.wallet_version),
       platform: optionalString(body.platform),
       credentialType: s.acceptedTypes.join('|'),
-      variant: { clientIdPrefix: s.clientIdPrefix, requestMode: s.clientIdPrefix === 'openid_federation' ? 'reference' : s.requestMode ?? config.oid4vp.requestMode },
+      variant: { clientIdPrefix: s.clientIdPrefix, requestMode: isSignedPrefix(s.clientIdPrefix) ? 'reference' : s.requestMode ?? config.oid4vp.requestMode },
       sessionId: s.id,
       status: s.status,
       outcome: s.result?.outcome,
@@ -323,7 +339,9 @@ export function createApp(deps: AppDeps) {
       { clientIdPrefix: 'redirect_uri', requestMode: 'value' },
       { clientIdPrefix: 'redirect_uri', requestMode: 'reference' },
     ];
+    variants.push({ clientIdPrefix: 'legacy_redirect_uri', requestMode: 'value' }, { clientIdPrefix: 'legacy_redirect_uri', requestMode: 'reference' });
     if (config.federation) variants.push({ clientIdPrefix: 'openid_federation', requestMode: 'reference' });
+    if (config.didWeb) variants.push({ clientIdPrefix: 'decentralized_identifier', requestMode: 'reference' });
     return variants;
   }
 
@@ -346,7 +364,10 @@ export function createApp(deps: AppDeps) {
     if (input === 'openid_federation') {
       return config.federation ? { ok: true, prefix: input } : { ok: false, error: 'openid_federation is not configured on this verifier' };
     }
-    return { ok: false, error: `unsupported client_id_prefix ${JSON.stringify(input)}; use redirect_uri or openid_federation` };
+    if (input === 'decentralized_identifier') {
+      return config.didWeb ? { ok: true, prefix: input } : { ok: false, error: 'decentralized_identifier is not configured on this verifier' };
+    }
+    return { ok: false, error: `unsupported client_id_prefix ${JSON.stringify(input)}; use ${CLIENT_ID_PREFIXES.filter((p) => p !== 'legacy_redirect_uri').join(', ')}` };
   }
 
   /** Each session has a cross-device state and a same-device variant ("<state>.sd"). */
