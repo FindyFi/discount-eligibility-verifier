@@ -3,26 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Alennusoikeuden tarkistus</title>
+  <meta name="color-scheme" content="light dark">
+  <title>Alennusoikeuden tarkastus</title>
+  <!-- Colours, fonts and the component theme come from the site stylesheet; the layout stays full screen. -->
+  <link rel="stylesheet" href="site.css">
   <style>
     html, body { height: 100%; margin: 0; }
-    body {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      background: #f4f6f8;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    }
+    body { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
     header {
       display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
-      padding: 10px 16px; background: #fff; border-bottom: 1px solid #dde2e7;
+      padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line);
     }
-    h1 { font-size: clamp(1rem, 3.5vw, 1.25rem); margin: 0; min-width: 0; overflow-wrap: anywhere; }
-    nav { display: flex; gap: 4px; }
-    nav button {
-      font: inherit; font-weight: 600; min-width: 48px; min-height: 40px;
-      border: 1px solid #c5ccd3; background: #fff; border-radius: 8px; cursor: pointer;
-    }
-    nav button[aria-pressed="true"] { background: #003680; border-color: #003680; color: #fff; }
+    h1 { font-size: clamp(1rem, 3.5vw, 1.3rem); min-width: 0; overflow-wrap: anywhere; }
+    .segmented button { min-width: 48px; min-height: 40px; }
     credential-verifier { min-height: 0; }
   </style>
   <script type="module" src="verifier.js"></script>
@@ -30,7 +23,7 @@
 <body>
   <header>
     <h1 data-i18n="title">Alennusoikeuden tarkastus</h1>
-    <nav aria-label="Kieli / Språk / Language">
+    <nav class="segmented" aria-label="Kieli / Språk / Language">
       <button type="button" data-lang="fi" aria-pressed="true">FI</button>
       <button type="button" data-lang="sv" aria-pressed="false">SV</button>
       <button type="button" data-lang="en" aria-pressed="false">EN</button>
