@@ -116,7 +116,7 @@ browser that started the session received the response code, which defeats sessi
 
 ## OpenID Federation client identifier (`openid_federation`)
 
-With `redirect_uri` (the default), wallets cannot authenticate the verifier. With `openid_federation`, the verifier is itself a federation entity:
+With `redirect_uri` (the default when `didWeb` is not configured), wallets cannot authenticate the verifier. With `openid_federation`, the verifier is itself a federation entity:
 wallets resolve its trust chain, show its registered name, and check that the request is signed by a key from its metadata.
 
 1. Generate two keys: `npm run keygen` for `FEDERATION_KEY` and again for `REQUEST_SIGNING_KEY`.
@@ -134,12 +134,13 @@ The entity configuration is served at `/.well-known/openid-federation`.
 
 ## did:web client identifier (`decentralized_identifier`)
 
-A second way to let wallets authenticate the verifier, without a federation: the verifier has a `did:web` identity and signs its requests with a key from the DID document.
+The recommended setup: the verifier has a `did:web` identity and signs its requests with a key from the DID document.
+In wallet testing this was the only variant that Heidi, Hovi, Paradym and Toppan all accepted; several of them reject unsigned requests.
 
 1. Generate a key with `npm run keygen` and set `DID_WEB_KEY`.
 2. Uncomment the `didWeb` section in the configuration. `publicUrl` must be https and have no path; the DID is `did:web:<host>`.
 3. The DID document is served at `/.well-known/did.json`. Requests are signed (`kid` is `<did>#key-1`) and passed by reference.
-4. Choose the prefix per session with `"client_id_prefix": "decentralized_identifier"`, or make it the default with `oid4vp.clientIdPrefix`.
+4. With `didWeb` configured, `decentralized_identifier` is the default prefix unless `oid4vp.clientIdPrefix` says otherwise. API clients can still pick another one per session with `client_id_prefix` in `POST /api/sessions`.
 
 Key binding must name `decentralized_identifier:<did>`; the bare DID is also accepted.
 
@@ -160,8 +161,7 @@ An issuer that is not listed is still rejected. Treat the list as a trust anchor
 ## Wallet compatibility tester
 
 `/compat.html` helps test which wallets work with which request variants:
-`redirect_uri` with the request in the QR code and by reference, a legacy `redirect_uri` variant (pre-1.0 drafts: `client_id_scheme=redirect_uri` with a bare `client_id`, by value and by reference),
-and `openid_federation` and `decentralized_identifier` when they are configured.
+`redirect_uri` with the request in the QR code and by reference, and `openid_federation` and `decentralized_identifier` when they are configured.
 Enable it with `compat.enabled` and a `compat.token`, which the tester enters on the page.
 
 1. Choose the wallet, its version and platform, and the credential the wallet holds.

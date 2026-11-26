@@ -25,8 +25,6 @@ export function clientId(config: ServiceConfig, prefix: ClientIdPrefix = config.
     if (!config.didWeb) throw new Error('decentralized_identifier requires didWeb configuration');
     return `decentralized_identifier:${config.didWeb.did}`;
   }
-  // Pre-1.0 drafts: the scheme travels in client_id_scheme and client_id is the bare URI.
-  if (prefix === 'legacy_redirect_uri') return responseUri(config);
   return `redirect_uri:${responseUri(config)}`;
 }
 
@@ -36,8 +34,7 @@ export function clientId(config: ServiceConfig, prefix: ClientIdPrefix = config.
  */
 export function presentationAudiences(config: ServiceConfig, prefix: ClientIdPrefix = config.oid4vp.clientIdPrefix): string[] {
   const unprefixed = prefix === 'openid_federation' ? config.federation!.entityId : prefix === 'decentralized_identifier' ? config.didWeb!.did : responseUri(config);
-  // A legacy wallet might also have learned the prefixed form from the 1.0 spec.
-  return [...new Set([clientId(config, prefix), unprefixed, ...(prefix === 'legacy_redirect_uri' ? [`redirect_uri:${unprefixed}`] : [])])];
+  return [clientId(config, prefix), unprefixed];
 }
 
 /** Audiences for the Digital Credentials API, where the browser vouches for the origin. */
@@ -57,12 +54,9 @@ export function buildDcqlQuery(policies: CredentialTypePolicy[]) {
     : { credentials };
 }
 
-export function clientMetadata(config: ServiceConfig, prefix?: ClientIdPrefix) {
-  const formats = { 'dc+sd-jwt': { 'sd-jwt_alg_values': SIGNING_ALGS, 'kb-jwt_alg_values': SIGNING_ALGS } };
+export function clientMetadata(config: ServiceConfig) {
   return {
-    vp_formats_supported: formats,
-    // Drafts before 1.0 called it vp_formats and named the SD-JWT VC format vc+sd-jwt.
-    ...(prefix === 'legacy_redirect_uri' ? { vp_formats: { ...formats, 'vc+sd-jwt': formats['dc+sd-jwt'] } } : {}),
+    vp_formats_supported: { 'dc+sd-jwt': { 'sd-jwt_alg_values': SIGNING_ALGS, 'kb-jwt_alg_values': SIGNING_ALGS } },
     ...(config.oid4vp.verifierName ? { client_name: config.oid4vp.verifierName } : {}),
   };
 }
@@ -70,14 +64,13 @@ export function clientMetadata(config: ServiceConfig, prefix?: ClientIdPrefix) {
 export function authorizationRequestParams(config: ServiceConfig, session: Session, policies: CredentialTypePolicy[]): Record<string, string> {
   return {
     client_id: clientId(config, session.clientIdPrefix),
-    ...(session.clientIdPrefix === 'legacy_redirect_uri' ? { client_id_scheme: 'redirect_uri' } : {}),
     response_type: 'vp_token',
     response_mode: 'direct_post',
     response_uri: responseUri(config),
     nonce: session.nonce,
     state: session.state,
     dcql_query: JSON.stringify(buildDcqlQuery(policies)),
-    client_metadata: JSON.stringify(clientMetadata(config, session.clientIdPrefix)),
+    client_metadata: JSON.stringify(clientMetadata(config)),
   };
 }
 
@@ -88,7 +81,7 @@ export function walletUrl(config: ServiceConfig, session: Session, policies: Cre
   // Signed requests are always passed by reference to keep the link short.
   const byReference = (session.requestMode ?? config.oid4vp.requestMode) === 'reference' || isSignedPrefix(session.clientIdPrefix);
   const params = byReference
-    ? { client_id: clientId(config, session.clientIdPrefix), ...(session.clientIdPrefix === 'legacy_redirect_uri' ? { client_id_scheme: 'redirect_uri' } : {}), request_uri: `${config.publicUrl}/oid4vp/request/${session.state}` }
+    ? { client_id: clientId(config, session.clientIdPrefix), request_uri: `${config.publicUrl}/oid4vp/request/${session.state}` }
     : authorizationRequestParams(config, session, policies);
   return base + sep + new URLSearchParams(params).toString();
 }

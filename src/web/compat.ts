@@ -5,7 +5,8 @@
 import { qrSvg } from './qr.js';
 
 interface Variant {
-  clientIdPrefix: 'redirect_uri' | 'openid_federation' | 'decentralized_identifier' | 'legacy_redirect_uri';
+  // A string, not a union: stored results may name variants this verifier no longer offers.
+  clientIdPrefix: string;
   requestMode: 'value' | 'reference';
 }
 interface Info {
@@ -52,8 +53,7 @@ const variantLabel = (v: Variant) => {
   const how = v.requestMode === 'value' ? 'in QR' : 'by reference';
   if (v.clientIdPrefix === 'openid_federation') return 'openid_federation (signed, by reference)';
   if (v.clientIdPrefix === 'decentralized_identifier') return 'decentralized_identifier (did:web, signed, by reference)';
-  if (v.clientIdPrefix === 'legacy_redirect_uri') return `legacy redirect_uri (client_id_scheme, pre-1.0) · ${how}`;
-  return `redirect_uri · ${how}`;
+  return `${v.clientIdPrefix} · ${how}`;
 };
 const TERMINAL = new Set(['completed', 'failed', 'expired']);
 

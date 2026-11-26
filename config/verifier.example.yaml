@@ -22,7 +22,9 @@ timeZone: Europe/Helsinki
 allowJwtVcIssuerMetadata: true
 
 oid4vp:
-  clientIdPrefix: redirect_uri      # default for new sessions: redirect_uri, openid_federation (needs federation) or decentralized_identifier (needs didWeb)
+  # Default for new sessions: decentralized_identifier (needs didWeb), openid_federation (needs federation) or redirect_uri.
+  # When unset: decentralized_identifier if didWeb is configured, otherwise redirect_uri.
+  # clientIdPrefix: decentralized_identifier
   requestMode: reference            # reference (default): short QR + request_uri; value: everything in the QR code
   walletUrlScheme: openid4vp://
   sessionTtlSeconds: 300

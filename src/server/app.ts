@@ -339,7 +339,6 @@ export function createApp(deps: AppDeps) {
       { clientIdPrefix: 'redirect_uri', requestMode: 'value' },
       { clientIdPrefix: 'redirect_uri', requestMode: 'reference' },
     ];
-    variants.push({ clientIdPrefix: 'legacy_redirect_uri', requestMode: 'value' }, { clientIdPrefix: 'legacy_redirect_uri', requestMode: 'reference' });
     if (config.federation) variants.push({ clientIdPrefix: 'openid_federation', requestMode: 'reference' });
     if (config.didWeb) variants.push({ clientIdPrefix: 'decentralized_identifier', requestMode: 'reference' });
     return variants;
@@ -367,7 +366,7 @@ export function createApp(deps: AppDeps) {
     if (input === 'decentralized_identifier') {
       return config.didWeb ? { ok: true, prefix: input } : { ok: false, error: 'decentralized_identifier is not configured on this verifier' };
     }
-    return { ok: false, error: `unsupported client_id_prefix ${JSON.stringify(input)}; use ${CLIENT_ID_PREFIXES.filter((p) => p !== 'legacy_redirect_uri').join(', ')}` };
+    return { ok: false, error: `unsupported client_id_prefix ${JSON.stringify(input)}; use ${CLIENT_ID_PREFIXES.join(', ')}` };
   }
 
   /** Each session has a cross-device state and a same-device variant ("<state>.sd"). */

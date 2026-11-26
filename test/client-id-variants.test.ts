@@ -65,33 +65,39 @@ describe('decentralized_identifier client ID prefix', () => {
   });
 });
 
-describe('legacy_redirect_uri variant', () => {
-  it('sends client_id_scheme with a bare client_id, by value and by reference', async () => {
-    const svc = await createTestService({ compat: { enabled: true, token: TOKEN, resultsFile: '/dev/null' } });
-    for (const requestMode of ['value', 'reference']) {
-      const res = await svc.app.request('/api/compat/sessions', {
-        method: 'POST',
-        headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ variant: { clientIdPrefix: 'legacy_redirect_uri', requestMode }, credential_type: 'pension' }),
-      });
-      expect(res.status).toBe(201);
-      const s = (await res.json()) as Record<string, string>;
-      const params = new URL(s.wallet_url!.replace('openid4vp://', 'https://wallet.invalid/')).searchParams;
-      expect(params.get('client_id')).toBe(`${PUBLIC_URL}/oid4vp/response`);
-      expect(params.get('client_id_scheme')).toBe('redirect_uri');
-      expect(params.get('request_uri') !== null).toBe(requestMode === 'reference');
-      if (requestMode === 'value') expect(JSON.parse(params.get('client_metadata')!).vp_formats['vc+sd-jwt']).toBeTruthy();
-      // The wallet echoes the bare client_id as the key binding audience.
-      expect(await svc.wallet(s.wallet_url!)).toEqual({});
-    }
-  });
-
-  it('is not available through the integration API', async () => {
-    const svc = await createTestService();
-    const res = await svc.app.request('/api/sessions', {
+describe('default client ID prefix', () => {
+  const createSession = (svc: Awaited<ReturnType<typeof createTestService>>, body: object = {}) =>
+    svc.app.request('/api/sessions', {
       method: 'POST',
       headers: { authorization: 'Bearer shop-secret-key-0123456789', 'content-type': 'application/json' },
-      body: JSON.stringify({ client_id_prefix: 'legacy_redirect_uri' }),
+      body: JSON.stringify(body),
+    });
+
+  it('is decentralized_identifier when didWeb is configured, for API and kiosk sessions', async () => {
+    const svc = await createTestService({ didWeb: { requestSigningKey: await didWebKey() } });
+    expect(svc.config.oid4vp.clientIdPrefix).toBe('decentralized_identifier');
+    const api = (await (await createSession(svc)).json()) as Record<string, string>;
+    expect(api.client_id_prefix).toBe('decentralized_identifier');
+    expect(api.wallet_url).toContain('client_id=decentralized_identifier%3Adid%3Aweb%3Averifier.example');
+    const kiosk = (await (await svc.app.request('/public/kiosk/sessions', { method: 'POST' })).json()) as Record<string, string>;
+    expect(kiosk.client_id_prefix).toBe('decentralized_identifier');
+    // An API client may still ask for the unsigned variant.
+    expect(((await (await createSession(svc, { client_id_prefix: 'redirect_uri' })).json()) as Record<string, string>).client_id_prefix).toBe('redirect_uri');
+  });
+
+  it('is redirect_uri without didWeb, and an explicit setting wins', async () => {
+    expect((await createTestService()).config.oid4vp.clientIdPrefix).toBe('redirect_uri');
+    const svc = await createTestService({ didWeb: { requestSigningKey: await didWebKey() }, oid4vp: { clientIdPrefix: 'redirect_uri' } });
+    expect(svc.config.oid4vp.clientIdPrefix).toBe('redirect_uri');
+  });
+
+  it('rejects the removed pre-1.0 legacy_redirect_uri variant', async () => {
+    const svc = await createTestService({ compat: { enabled: true, token: TOKEN, resultsFile: '/dev/null' } });
+    expect((await createSession(svc, { client_id_prefix: 'legacy_redirect_uri' })).status).toBe(400);
+    const res = await svc.app.request('/api/compat/sessions', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ variant: { clientIdPrefix: 'legacy_redirect_uri', requestMode: 'reference' }, credential_type: 'pension' }),
     });
     expect(res.status).toBe(400);
   });

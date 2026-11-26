@@ -8,12 +8,13 @@ import type { JWK } from 'jose';
 import type { CredentialTypePolicy, TrustAnchorConfig, TrustedDidIssuer } from '../core/index.js';
 
 /**
- * - redirect_uri: OpenID4VP 1.0 default, unsigned.
- * - openid_federation, decentralized_identifier: signed request objects, always passed by reference.
- * - legacy_redirect_uri: pre-1.0 drafts (client_id_scheme=redirect_uri with a bare client_id), for wallets that predate prefixes.
+ * - decentralized_identifier: did:web, signed request objects passed by reference. Default when didWeb is configured,
+ *   as it works with the most wallets.
+ * - openid_federation: signed request objects passed by reference.
+ * - redirect_uri: unsigned; the default without didWeb (e.g. local development over http).
  */
-export type ClientIdPrefix = 'redirect_uri' | 'openid_federation' | 'decentralized_identifier' | 'legacy_redirect_uri';
-export const CLIENT_ID_PREFIXES: ClientIdPrefix[] = ['redirect_uri', 'openid_federation', 'decentralized_identifier', 'legacy_redirect_uri'];
+export type ClientIdPrefix = 'redirect_uri' | 'openid_federation' | 'decentralized_identifier';
+export const CLIENT_ID_PREFIXES: ClientIdPrefix[] = ['redirect_uri', 'openid_federation', 'decentralized_identifier'];
 
 export interface ApiClient {
   id: string;
@@ -130,7 +131,7 @@ export async function normalizeConfig(raw: Record<string, any>, baseDir = proces
   const trustAnchors = Array.isArray(raw.trustAnchors) ? raw.trustAnchors : [];
   if (trustAnchors.length === 0) errors.push('trustAnchors must list at least one trust anchor');
 
-  const prefix = raw.oid4vp?.clientIdPrefix ?? 'redirect_uri';
+  const prefix = raw.oid4vp?.clientIdPrefix ?? (raw.didWeb ? 'decentralized_identifier' : 'redirect_uri');
   if (!CLIENT_ID_PREFIXES.includes(prefix)) errors.push(`oid4vp.clientIdPrefix "${prefix}" is not supported`);
 
   let federation: FederationConfig | undefined;
