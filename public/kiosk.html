@@ -29,7 +29,7 @@
 </head>
 <body>
   <header>
-    <h1 data-i18n="title">Alennusoikeuden tarkistus</h1>
+    <h1 data-i18n="title">Alennusoikeuden tarkastus</h1>
     <nav aria-label="Kieli / Språk / Language">
       <button type="button" data-lang="fi" aria-pressed="true">FI</button>
       <button type="button" data-lang="sv" aria-pressed="false">SV</button>
@@ -39,7 +39,7 @@
   <credential-verifier mode="kiosk"></credential-verifier>
   <script>
     // Language from ?lang=fi|sv|en, switchable from the header.
-    const titles = { fi: 'Alennusoikeuden tarkistus', sv: 'Kontroll av rabattberättigande', en: 'Discount eligibility check' };
+    const titles = { fi: 'Alennusoikeuden tarkastus', sv: 'Kontroll av rabattberättigande', en: 'Discount eligibility check' };
     const el = document.querySelector('credential-verifier');
     function setLang(lang) {
       if (!titles[lang]) return;
