@@ -1,0 +1,21 @@
+<!-- Source of public/og-image.png, the 1200×630 link preview image (Open Graph / Twitter card).
+     Regenerate with: rsvg-convert -w 1200 -h 630 tools/og-image.svg -o public/og-image.png
+     Colours follow public/site.css (Findynet navy, electric blue and cyan). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0d0342"/>
+  <circle cx="1060" cy="120" r="300" fill="#0901b9" opacity="0.55"/>
+  <circle cx="1120" cy="560" r="180" fill="#8de4fe" opacity="0.12"/>
+
+  <g transform="translate(80 86) scale(4.2)" fill="none" stroke="#8de4fe" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6z"/>
+    <path d="m8.5 12 2.5 2.5 4.5-5"/>
+  </g>
+
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" fill="#ffffff">
+    <text x="80" y="330" font-size="72" font-weight="800" letter-spacing="-1">Discount eligibility</text>
+    <text x="80" y="412" font-size="72" font-weight="800" letter-spacing="-1">verifier</text>
+    <text x="80" y="486" font-size="30" fill="#ecebf7">Pensioner and student credentials from EUDI wallets.</text>
+    <text x="80" y="528" font-size="30" fill="#ecebf7">No name, no date of birth.</text>
+  </g>
+  <rect x="80" y="566" width="120" height="6" rx="3" fill="#8de4fe"/>
+</svg>

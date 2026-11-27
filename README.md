@@ -194,6 +194,10 @@ The service serves a dependency-free web component at `/verifier.js`, plus these
 The demo and integration pages share `public/site.css`, which follows the Findynet visual style. Its display font,
 Archivo (SIL Open Font License), is copied into `public/fonts/` by `npm run build:web`.
 
+The pages carry Open Graph and Twitter card tags for link previews. Their absolute URLs use a `%PUBLIC_URL%`
+placeholder that the server replaces with `publicUrl` when it serves the HTML. The preview image
+`public/og-image.png` is rendered from `tools/og-image.svg` (see the command at the top of that file).
+
 ```html
 <script type="module" src="https://verifier.example.com/verifier.js"></script>
 <credential-verifier session-id="…" session-token="…" lang="fi"></credential-verifier>

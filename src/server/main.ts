@@ -10,6 +10,7 @@ import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { VerifierDid } from './did-entity.js';
 import { VerifierEntity } from './federation-entity.js';
+import { fillPublicUrl } from './pages.js';
 import { createResultSigner } from './results.js';
 import { MemorySessionStore } from './sessions.js';
 
@@ -33,7 +34,7 @@ const entity = config.federation ? VerifierEntity.create(config, verifier.federa
 const did = config.didWeb ? VerifierDid.create(config) : undefined;
 root.route('/', createApp({ config, store, signer, verifier, entity, did, log }));
 const staticDir = process.env.STATIC_DIR ?? 'public';
-if (existsSync(staticDir)) root.use('/*', serveStatic({ root: staticDir }));
+if (existsSync(staticDir)) root.use('/*', fillPublicUrl(config.publicUrl), serveStatic({ root: staticDir }));
 
 const server = serve({ fetch: root.fetch, port: config.port }, (info) => {
   console.log(`[verifier] listening on :${info.port}, public URL ${config.publicUrl}`);
